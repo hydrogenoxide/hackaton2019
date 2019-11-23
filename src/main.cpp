@@ -1,8 +1,42 @@
 #include <iostream>
+#include <string>
+#include <sstream>
 #include "xodr/xodr_map.h"
 
+class Tris {
+private:
+  Eigen::Vector2d v1;
+  Eigen::Vector2d v2;
+  Eigen::Vector2d v3;
 
-class Stl_bin_file{
+public:
+
+  Tris(){
+    v1 = Eigen::Vector2d(0.0, 0.0);
+    v2 = Eigen::Vector2d(0.0, 0.0);
+    v3 = Eigen::Vector2d(0.0, 0.0);
+  }
+
+  Tris(Eigen::Vector2d vv1,
+       Eigen::Vector2d vv2,
+       Eigen::Vector2d vv3) {
+    v1 = vv1;
+    v2 = vv2;
+    v3 = vv3;
+  }
+
+  std::vector<Eigen::Vector2d> get_vertecies() {
+    std::vector<Eigen::Vector2d> t;
+    t.push_back(v1);
+    t.push_back(v2);
+    t.push_back(v3);
+    return t;
+  }
+
+};
+
+class Stl{
+private:
   struct stl_facet {
     float normal[3];
     float v1[3];
@@ -11,12 +45,43 @@ class Stl_bin_file{
     unsigned int abc[2] = {0};
   };
 
-private:
-  std::vector<stl_facet> facets;
-  unsigned int num_facets;
+  std::string name;
+  std::vector<Tris> facets;
 
-  Stl_bin_file(std::vector<Eigen::Vector2d[3]>) {
-    // TODO: implement
+  std::string tris_to_ascii(Tris tris) {
+    std::vector<Eigen::Vector2d> vertices = tris.get_vertecies();
+    if (vertices.size() != 3) {
+      return "";
+    }
+    Eigen::Vector2d v1 = vertices.at(0);
+    Eigen::Vector2d v2 = vertices.at(1);
+    Eigen::Vector2d v3 = vertices.at(2);
+
+    std::ostringstream oss;
+    oss << "facet normal 0 0 1" << std::endl;
+    oss << "\touter loop" << std::endl;
+    oss << "\t\tvertex " << (v1.x()) << " " << (v1.y()) << " " << "0" << std::endl;
+    oss << "\t\tvertex " << (v2.x()) << " " << (v2.y()) << " " << "0" << std::endl;
+    oss << "\t\tvertex " << (v3.x()) << " " << (v3.y()) << " " << "0" << std::endl;
+    oss << "\tendloop" << std::endl;
+    oss << "endfacet" << std::endl;
+
+    return oss.str();
+  }
+
+public:
+  Stl(std::vector<Tris> tris, std::string name) {
+    facets = tris;
+    name = name;
+  }
+  std::string to_ascii() {
+    std::ostringstream oss;
+    oss << "solid " << name << std::endl;
+    for (Tris t : facets) {
+      oss << tris_to_ascii(t);
+    }
+    oss << "endsolid " << name << std::endl;
+    return oss.str();
   }
 };
 
@@ -67,8 +132,7 @@ int get_poligon(double s_section, std::vector<LaneSection::WidthPoly3>* polygons
 std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection* laneSection,
 						ReferenceLine* ref_line,
 						double s, double start){
-  std::vector<Eigen::Vector2d> vertex_row;
-  vertex_row.reserve(laneSection->lanes().size());
+  std::vector<Eigen::Vector2d> vertex_row(laneSection->lanes().size() + 1);
 
   // point and tangent direction at the current s we are looking at
   ReferenceLine::PointAndTangentDir ptd = ref_line->eval(s);
@@ -87,7 +151,7 @@ std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection* laneSection,
     int poly_idx = get_poligon(s - start, &polygons);
     LaneSection::WidthPoly3 poly = polygons.at(poly_idx);
     double width = poly.poly3().eval(s - poly.sOffset());
-    accumulated_width += width;
+    accumulated_width -= width;
     vertex_row.at(offset - i) = ptd.pointWithTCoord(accumulated_width);
   }
 
@@ -107,27 +171,26 @@ std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection* laneSection,
   return vertex_row;
 }
 
-std::vector<Eigen::Vector2d[3]> create_mesh(std::vector<Eigen::Vector2d>* vertices_behind,
+std::vector<Tris> create_mesh(std::vector<Eigen::Vector2d>* vertices_behind,
 					    std::vector<Eigen::Vector2d>* vertices_next){
-  std::vector<Eigen::Vector2d[3]> mesh;
-  mesh.reserve(2 * (vertices_next->size() - 1));
+  std::vector<Tris> mesh(2 * (vertices_next->size() - 1));
 
-  for (int i = 0; i < vertices_next->size(); ++i) {
-    Eigen::Vector2d tris1[3] = {vertices_next->at(i), vertices_behind->at(i), vertices_behind->at(i + 1)};
-    Eigen::Vector2d tris2[3] = {vertices_next->at(i), vertices_behind->at(i + 1), vertices_next->at(i + 1)};
+  for (int i = 0; i < vertices_next->size() - 1; ++i) {
+    Tris tris1(vertices_next->at(i), vertices_behind->at(i), vertices_behind->at(i + 1));
+    Tris tris2(vertices_next->at(i), vertices_behind->at(i + 1), vertices_next->at(i + 1));
     mesh.push_back(tris1);
     mesh.push_back(tris2);
   }
   return mesh;
 }
 
-void convert_stl(XodrMap* xodrMap) {
+std::vector<Tris> convert_stl(XodrMap* xodrMap) {
 
-  size_t number_steps = 20;
+  size_t number_steps = 100;
 
+  std::vector<Tris> mesh;
 
   for (const Road& road : xodrMap->roads()) {
-    // std::cerr << "New Road" << std::endl;
 
 
     ReferenceLine ref_line = road.referenceLine();
@@ -142,22 +205,26 @@ void convert_stl(XodrMap* xodrMap) {
       std::vector<Eigen::Vector2d> vertices_behind =
 	get_one_vertex_row(&laneSection, &ref_line, s, start);
 
-      std::vector<std::array<Eigen::Vector2d, 3>> mesh;
+
 
       for (int i = 1; i < number_steps; i++) {
-	s += i * step_size;
+	s += step_size;
+	if (s > laneSection.endS()) {
+	  std::cerr << "s to big after " << i << " steps" << std::endl;
+	  break;
+	}
 	std::vector<Eigen::Vector2d> vertices_next =
 	  get_one_vertex_row(&laneSection, &ref_line, s, start);
 
-	std::vector<Eigen::Vector2d[3]> new_tris = create_mesh(&vertices_behind, &vertices_next);
+	std::vector<Tris> new_tris = create_mesh(&vertices_behind, &vertices_next);
 	mesh.reserve(mesh.size() + new_tris.size());
 	mesh.insert(mesh.end(), new_tris.begin(), new_tris.end());
 	vertices_behind = vertices_next;
 
       }
-
     }
   }
+  return mesh;
 }
 
 int main() {
@@ -170,9 +237,11 @@ int main() {
   if (!fromFileRes.hasFatalErrors())
     {
       XodrMap* xodrMap(new XodrMap(std::move(fromFileRes.value())));
-      std::cout << "solid road" << std::endl;
-      convert_stl(xodrMap);
-      std::cout << "endsolid road" << std::endl;
+
+      std::vector<Tris> mesh = convert_stl(xodrMap);
+
+      Stl stl(mesh, "road");
+      std::cout << stl.to_ascii();
     }
   else
     {
