@@ -28,38 +28,43 @@ static bool showLaneType(LaneType laneType)
 void tris(Eigen::Vector2d v1, Eigen::Vector2d v2, Eigen::Vector2d v3) {
   std::cout << "facet normal 0 0 1" << std::endl;
   std::cout << "\touter loop" << std::endl;
-  std::cout << "\t\tvertex" << v1.x() << " " << v1.y() << " " << "0" << std::endl;
-  std::cout << "\t\tvertex" << v2.x() << " " << v2.y() << " " << "0" << std::endl;
-  std::cout << "\t\tvertex" << v3.x() << " " << v3.y() << " " << "0" << std::endl;
-  std::cout << "\t\tvertex" << std::endl;
-  std::cout << "\t\tvertex" << std::endl;
+  std::cout << "\t\tvertex " << abs(v1.x()) << " " << abs(v1.y()) << " " << "0" << std::endl;
+  std::cout << "\t\tvertex " << abs(v2.x()) << " " << abs(v2.y()) << " " << "0" << std::endl;
+  std::cout << "\t\tvertex " << abs(v3.x()) << " " << abs(v3.y()) << " " << "0" << std::endl;
   std::cout << "\tendloop" << std::endl;
-  std::cout << "end facet" << std::endl;
+  std::cout << "endfacet" << std::endl;
 }
 
 int get_poligon(double s, std::vector<LaneSection::WidthPoly3>* polygons) {
   double commulative_offset = 0;
 
+  // std::cout << "get_poligon" << std::endl;
+  // std::cout << "s " << s << std::endl;
+
   for (int i = 0; i < polygons->size(); i++) {
     commulative_offset += polygons->at(i).sOffset();
-    if (commulative_offset >= s) {
+    // std::cout << "Round " << i << std::endl;
+    // std::cout << "com offset " << commulative_offset << std::endl;
+    // std::cout << "current poly offset " << polygons->at(i).sOffset() << std::endl;
+    if (s <= commulative_offset) {
+      // std::cout << "return index  " << i << std::endl;
       return i;
     }
   }
-  return -1;
+  return polygons->size() - 1;
 }
 
 void convert_stl(XodrMap* xodrMap) {
 
   size_t number_steps = 20;
 
-  
+
   for (const Road& road : xodrMap->roads()) {
     for (LaneSection laneSection : road.laneSections()){
-      
+
       double step_size = (laneSection.endS() - laneSection.startS()) / number_steps;
       double start = laneSection.startS();
-      
+
       for (LaneSection::Lane lane : laneSection.lanes()){
 	// woosh
 	if (lane.id().operator int() != 1) {
@@ -86,6 +91,9 @@ void convert_stl(XodrMap* xodrMap) {
 
 	Eigen::Vector2d v1 = ptd.pointWithTCoord(t1);
 	Eigen::Vector2d v2 = ptd.pointWithTCoord(t2);
+
+	// std::cout << "v1 (" << v1.x() << "," << v1.y() << ")" << std::endl;
+	// std::cout << "v2 (" << v2.x() << "," << v2.y() << ")" << std::endl;
 
         for (int i = 1; i < number_steps; i++) {
           s = start + i * step_size;
@@ -118,7 +126,7 @@ void convert_stl(XodrMap* xodrMap) {
 int main() {
   const char* path = xodrFiles[1].path;
 
-  std::cout << "Loading xodr file: " << path << std::endl;
+  // std::cout << "Loading xodr file: " << path << std::endl;
 
   XodrParseResult<XodrMap> fromFileRes = XodrMap::fromFile(path);
 
@@ -139,7 +147,7 @@ int main() {
 
       std::cerr << "Failed to load xodr file " << path << std::endl;
     }
-  
+
 
   return 0;
 }
