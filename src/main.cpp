@@ -4,136 +4,9 @@
 #include "string.h"
 #include "xodr/xodr_map.h"
 #include "visible_lanes.h"
+#include "stl.h"
+#include "tris.h"
 
-class Tris {
-private:
-  Eigen::Vector2d v1;
-  Eigen::Vector2d v2;
-  Eigen::Vector2d v3;
-
-public:
-
-  Tris(){
-    v1 = Eigen::Vector2d(0.0, 0.0);
-    v2 = Eigen::Vector2d(0.0, 0.0);
-    v3 = Eigen::Vector2d(0.0, 0.0);
-  }
-
-  Tris(Eigen::Vector2d vv1,
-       Eigen::Vector2d vv2,
-       Eigen::Vector2d vv3) {
-    v1 = vv1;
-    v2 = vv2;
-    v3 = vv3;
-  }
-
-  std::vector<Eigen::Vector2d> get_vertecies() {
-    std::vector<Eigen::Vector2d> t;
-    t.push_back(v1);
-    t.push_back(v2);
-    t.push_back(v3);
-    return t;
-  }
-
-};
-
-class Stl{
-private:
-  struct stl_facet {
-    float normal[3];
-    float v1[3];
-    float v2[3];
-    float v3[3];
-    unsigned int abc[2] = {0};
-  };
-
-  std::string name;
-  std::vector<Tris> facets;
-
-  std::string tris_to_ascii(Tris tris) {
-    std::vector<Eigen::Vector2d> vertices = tris.get_vertecies();
-    if (vertices.size() != 3) {
-      return "";
-    }
-    Eigen::Vector2d v1 = vertices.at(0);
-    Eigen::Vector2d v2 = vertices.at(1);
-    Eigen::Vector2d v3 = vertices.at(2);
-
-    std::ostringstream oss;
-    oss << "facet normal 0 0 1" << std::endl;
-    oss << "\touter loop" << std::endl;
-    oss << "\t\tvertex " << (v1.x()) << " " << (v1.y()) << " " << "0" << std::endl;
-    oss << "\t\tvertex " << (v2.x()) << " " << (v2.y()) << " " << "0" << std::endl;
-    oss << "\t\tvertex " << (v3.x()) << " " << (v3.y()) << " " << "0" << std::endl;
-    oss << "\tendloop" << std::endl;
-    oss << "endfacet" << std::endl;
-
-    return oss.str();
-  }
-
-  stl_facet tris_to_facet(Tris tris) {
-    stl_facet facet;
-    facet.normal[0] = (float) 0.0;
-    facet.normal[1] = (float) 0.0;
-    facet.normal[2] = (float) 1.0;
-
-    std::vector<Eigen::Vector2d> vertices = tris.get_vertecies();
-
-    Eigen::Vector2d v1 = vertices.at(0);
-    Eigen::Vector2d v2 = vertices.at(1);
-    Eigen::Vector2d v3 = vertices.at(2);
-
-    facet.v1[0] = (float) v1.x();
-    facet.v1[1] = (float) v1.y();
-    facet.v1[2] = (float) 0.0;
-
-    facet.v2[0] = (float) v2.x();
-    facet.v2[1] = (float) v2.y();
-    facet.v3[2] = (float) 0.0;
-
-    facet.v3[0] = (float) v3.x();
-    facet.v3[1] = (float) v3.y();
-    facet.v3[2] = (float) 0.0;
-
-    return facet;
-  }
-
-public:
-  Stl(std::vector<Tris> tris, std::string name) {
-    facets = tris;
-    name = name;
-  }
-
-  std::string to_ascii() {
-    std::ostringstream oss;
-    oss << "solid " << name << std::endl;
-    for (Tris t : facets) {
-      oss << tris_to_ascii(t);
-    }
-    oss << "endsolid " << name << std::endl;
-    return oss.str();
-  }
-
-  void save_binary(std::string filename) {
-    std::ofstream file;
-    file.open(filename, std::ios::out | std::ios::binary);
-    file.imbue(std::locale::classic());
-
-    char header[80];
-    std::fill(header, header + sizeof( header ), 0 );
-    unsigned int num_facets = facets.size();
-    file.write(header, sizeof(header));
-    file.write((char*)&num_facets, sizeof(num_facets));
-
-    for (Tris t : facets) {
-      Stl::stl_facet f = tris_to_facet(t);
-
-      file.write((char*)&f, sizeof(Stl::stl_facet));
-
-    }
-
-  }
-};
 
 struct XodrFileInfo
 {
@@ -143,7 +16,6 @@ struct XodrFileInfo
 
 static const XodrFileInfo xodrFiles[] = {
 					 {"Crossing8Course", "data/opendrive/Crossing8Course.xodr"},
-					 {"CulDeSac", "data/opendrive/CulDeSac.xodr"},
 					 {"Roundabout8Course", "data/opendrive/Roundabout8Course.xodr"},
 					 {"sample1.1", "data/opendrive/sample1.1.xodr",}
 };
@@ -153,16 +25,10 @@ using namespace aid::xodr;
 int get_poligon(double s_section, std::vector<LaneSection::WidthPoly3>* polygons) {
   double commulative_offset = 0;
 
-  // std::cout << "get_poligon" << std::endl;
-  // std::cout << "s " << s << std::endl;
-
   for (int i = 0; i < polygons->size(); i++) {
     commulative_offset += polygons->at(i).sOffset();
-    // std::cout << "Round " << i << std::endl;
-    // std::cout << "com offset " << commulative_offset << std::endl;
-    // std::cout << "current poly offset " << polygons->at(i).sOffset() << std::endl;
+
     if (s_section < commulative_offset) {
-      // std::cout << "return index  " << i << std::endl;
       return i - 1;
     }
   }

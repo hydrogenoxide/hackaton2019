@@ -15,6 +15,6 @@ project(RealRoads VERSION 0.0.1
   DESCRIPTION "Convert and render XODR files"
   LANGUAGES CXX)
 add_executable(rr src/main.cpp
-  src/visible_lanes.cpp
+  src/visible_lanes.cpp src/stl.cpp src/tris.cpp
 )
 target_link_libraries(rr xodr tinyxml)
