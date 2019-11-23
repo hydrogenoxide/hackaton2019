@@ -25,43 +25,92 @@ static bool showLaneType(LaneType laneType)
     laneType == LaneType::BORDER;
 }
 
-std::string tris(double v1[], double v2[], double v3[]) {
+std::string tris(Eigen::Vector2d v1, Eigen::Vector2d v2, Eigen::Vector2d v3) {
   std::cout << "facet normal 0 0 1" << std::endl;
 	    std::cout << "\touter loop" << std::endl;
-	    std::cout << "\t\tvertex" << v1[0] << " " << v1[1] << " " << "0" << std::endl;
-	    std::cout << "\t\tvertex" << v2[0] << " " << v2[1] << " " << "0" << std::endl;
-	    std::cout << "\t\tvertex" << v3[0] << " " << v3[1] << " " << "0" << std::endl;
+	    std::cout << "\t\tvertex" << v1.x() << " " << v1.y() << " " << "0" << std::endl;
+	    std::cout << "\t\tvertex" << v2.x() << " " << v2.y() << " " << "0" << std::endl;
+	    std::cout << "\t\tvertex" << v3.x() << " " << v3.y() << " " << "0" << std::endl;
 	    std::cout << "\t\tvertex" << std::endl;
 	    std::cout << "\t\tvertex" << std::endl;
 	    std::cout << "\tendloop" << std::endl;
 	    std::cout << "end facet" << std::endl;
 }
 
-int get_poligon() {
+int get_poligon(double s, std::vector<LaneSection::WidthPoly3>* polygons) {
+  double commulative_offset = 0;
+
+  for (int i = 0; i < polygons->size(); i++) {
+    commulative_offset += polygons->at(i).sOffset();
+    if (commulative_offset >= s) {
+      return i;
+    }
+  }
   
 }
 
-void foo(XodrMap* xodrMap) {
+void convert_stl(XodrMap* xodrMap) {
+
+  size_t number_steps = 20;
+
+  
   for (const Road& road : xodrMap->roads()) {
     for (LaneSection laneSection : road.laneSections()){
+      
+      double step_size = (laneSection.endS() - laneSection.startS()) / number_steps;
+      double start = laneSection.startS();
+      
       for (LaneSection::Lane lane : laneSection.lanes()){
-        for (LaneSection::WidthPoly3 wpoly : lane.widthPoly3s()) {
+	// woosh
+	if (lane.id() != 1) {
+	  continue;
+	}
 
-	    double step_size = (laneSection.endS() - laneSection.startS()) / 20;
-	    
+	std::vector<LaneSection::WidthPoly3> polygons = lane.widthPoly3s();
 
-        }
+	double s = start + i * step_size;
+	int poly_idx = get_poligon(s, &polygons);
+	LaneSection::WidthPoly3 poly = polygons.at(poly_idx);
+	double width = poly.poly3().eval(s - poly.sOffset());
+
+	// only true for lane with id 1
+	double t1 = 0;
+	double t2 = width;
+
+	// that's wrong
+	ReferenceLine::PointAndTangentDir ptd = road.referenceLine().eval(s);
+
+	Eigen::Vector2d v1 = ptd.pointWithTCoord(t1);
+	Eigen::Vector2d v2 = ptd.pointWithTCoord(t2);
+
+		
+	for(int i = 1; i < number_steps, i++) {
+	  s = start + i * step_size;
+	  poly_idx = get_poligon(s, &polygons);
+	  poly = polygons.at(poly_idx);
+	  width = poly.poly3().eval(s - poly.sOffset());
+
+	  t1 = 0;
+	  t2 = width;
+
+	  Eigen::Vector2d v3 = ptd.pointWithTCoord(t1);
+	  Eigen::Vector2d v4 = ptd.pointWithTCoord(t2);
+
+
+	  // pay attention to order because of orientation!
+	  tris(v3, v2, v1);
+	  tris(v2, v3, v4);
+
+	  v1 = v3;
+	  v2 = v4;
+	  
+	}
+
       }
     }
   }
 
-  void bar(XodrMap* xodrMap) {
-    for (const Road& road : xodrMap->roads()) {
-      ReferenceLine rline = road.referenceLine();
-    
-    }
-  }
-
+  
   int main()
   {
     const char* path = xodrFiles[1].path;
