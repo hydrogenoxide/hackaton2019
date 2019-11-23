@@ -1,7 +1,23 @@
 #include <iostream>
 #include "xodr/xodr_map.h"
 
+class Stl_bin_file{
+  struct stl_facet {
+    float normal[3];
+    float v1[3];
+    float v2[3];
+    float v3[3];
+    unsigned int abc[2] = {0};
+  };
 
+private:
+  std::vector<stl_facet> facets;
+  unsigned int num_facets;
+
+  Stl_bin_file(std::vector<Eigen::Vector2d[3]>) {
+    // TODO: implement
+  }
+};
 
 struct XodrFileInfo
 {
@@ -18,24 +34,17 @@ static const XodrFileInfo xodrFiles[] = {
 
 using namespace aid::xodr;
 
-static bool showLaneType(LaneType laneType)
-{
-  return laneType == LaneType::DRIVING ||
-    laneType == LaneType::SIDEWALK ||
-    laneType == LaneType::BORDER;
-}
-
 void tris(Eigen::Vector2d v1, Eigen::Vector2d v2, Eigen::Vector2d v3) {
   std::cout << "facet normal 0 0 1" << std::endl;
   std::cout << "\touter loop" << std::endl;
-  std::cout << "\t\tvertex " << abs(v1.x()) << " " << abs(v1.y()) << " " << "0" << std::endl;
-  std::cout << "\t\tvertex " << abs(v2.x()) << " " << abs(v2.y()) << " " << "0" << std::endl;
-  std::cout << "\t\tvertex " << abs(v3.x()) << " " << abs(v3.y()) << " " << "0" << std::endl;
+  std::cout << "\t\tvertex " << (v1.x()) << " " << (v1.y()) << " " << "0" << std::endl;
+  std::cout << "\t\tvertex " << (v2.x()) << " " << (v2.y()) << " " << "0" << std::endl;
+  std::cout << "\t\tvertex " << (v3.x()) << " " << (v3.y()) << " " << "0" << std::endl;
   std::cout << "\tendloop" << std::endl;
   std::cout << "endfacet" << std::endl;
 }
 
-int get_poligon(double s, std::vector<LaneSection::WidthPoly3>* polygons) {
+int get_poligon(double s_section, std::vector<LaneSection::WidthPoly3>* polygons) {
   double commulative_offset = 0;
 
   // std::cout << "get_poligon" << std::endl;
@@ -46,9 +55,9 @@ int get_poligon(double s, std::vector<LaneSection::WidthPoly3>* polygons) {
     // std::cout << "Round " << i << std::endl;
     // std::cout << "com offset " << commulative_offset << std::endl;
     // std::cout << "current poly offset " << polygons->at(i).sOffset() << std::endl;
-    if (s <= commulative_offset) {
+    if (s_section < commulative_offset) {
       // std::cout << "return index  " << i << std::endl;
-      return i;
+      return i - 1;
     }
   }
   return polygons->size() - 1;
@@ -74,7 +83,7 @@ void convert_stl(XodrMap* xodrMap) {
 	std::vector<LaneSection::WidthPoly3> polygons = lane.widthPoly3s();
 
 	double s = start;
-	int poly_idx = get_poligon(s, &polygons);
+	int poly_idx = get_poligon(s - start, &polygons);
 	if (poly_idx < 0) {
 	  std::cerr << "Something went horribly wrong at the beginning :(" << std::endl;
 	  exit(-1);
@@ -97,7 +106,7 @@ void convert_stl(XodrMap* xodrMap) {
 
         for (int i = 1; i < number_steps; i++) {
           s = start + i * step_size;
-          poly_idx = get_poligon(s, &polygons);
+          poly_idx = get_poligon(s - start, &polygons);
 	  if (poly_idx < 0) {
 	    std::cerr << "Something went horribly wrong :(" << std::endl;
 	    exit(-1);
@@ -108,12 +117,18 @@ void convert_stl(XodrMap* xodrMap) {
           t1 = 0;
           t2 = width;
 
+	  ptd = road.referenceLine().eval(s);
           Eigen::Vector2d v3 = ptd.pointWithTCoord(t1);
           Eigen::Vector2d v4 = ptd.pointWithTCoord(t2);
 
           // pay attention to order because of orientation!
           tris(v3, v2, v1);
           tris(v2, v3, v4);
+
+	  // std::cout << "v1 (" << v1.x() << "," << v1.y() << ")" << std::endl;
+	  // std::cout << "v2 (" << v2.x() << "," << v2.y() << ")" << std::endl;
+	  // std::cout << "v3 (" << v3.x() << "," << v3.y() << ")" << std::endl;
+	  // std::cout << "v4 (" << v4.x() << "," << v4.y() << ")" << std::endl;
 
           v1 = v3;
           v2 = v4;
