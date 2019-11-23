@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include "xodr/xodr_map.h"
+#include "visible_lanes.h"
 
 class Tris {
 private:
@@ -212,7 +213,6 @@ std::vector<Tris> convert_stl(XodrMap* xodrMap) {
 	if (s > laneSection.endS()) {
 	  // The variable s becomes to big because of inaccuracies of floating point.
 	  // Set it to the end to fix the bug :)
-	  // std::cerr << "s=" << s << " too big (>" << laneSection.endS() << ") after " << i << " steps of " << step_size << std::endl;
 	  s = laneSection.endS();
 	}
 	std::vector<Eigen::Vector2d> vertices_next =

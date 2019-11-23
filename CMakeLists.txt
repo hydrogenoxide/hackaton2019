@@ -14,5 +14,7 @@ link_directories(lib/hackatum-2019/src/)
 project(RealRoads VERSION 0.0.1
   DESCRIPTION "Convert and render XODR files"
   LANGUAGES CXX)
-add_executable(rr src/main.cpp)
+add_executable(rr src/main.cpp
+  src/visible_lanes.cpp
+)
 target_link_libraries(rr xodr tinyxml)
