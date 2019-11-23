@@ -1,0 +1,3 @@
+[submodule "lib/hackatum-2019"]
+	path = lib/hackatum-2019
+	url = https://github.com/jad-nohra-aid/hackatum-2019
