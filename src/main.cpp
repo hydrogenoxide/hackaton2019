@@ -133,18 +133,18 @@ int get_poligon(double s_section, std::vector<LaneSection::WidthPoly3>* polygons
 std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection* laneSection,
 						ReferenceLine* ref_line,
 						double s, double start){
-  std::vector<Eigen::Vector2d> vertex_row(laneSection->lanes().size() + 1);
+  std::vector<Eigen::Vector2d> vertex_row(visible_lanes(laneSection).size() + 1);
 
   // point and tangent direction at the current s we are looking at
   ReferenceLine::PointAndTangentDir ptd = ref_line->eval(s);
 
-  int offset = laneSection->numRightLanes();
+  int offset = num_visible_lanes_right(laneSection);
 
   vertex_row.at(offset) = ptd.pointWithTCoord(0);
 
   double accumulated_width = 0;
   // iterate over lanes with negative id
-  for (int i = 1; i <= laneSection->numRightLanes(); i++) {
+  for (int i = 1; i <= num_visible_lanes_right(laneSection); i++) {
     LaneID lid = LaneID(-i);
     LaneSection::Lane lane = laneSection->laneById(lid);
     std::vector<LaneSection::WidthPoly3> polygons = lane.widthPoly3s();
@@ -158,7 +158,7 @@ std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection* laneSection,
 
   accumulated_width = 0;
   // iterate over lanes with positive id
-  for (int i = 1; i <= laneSection->numLeftLanes(); i++) {
+  for (int i = 1; i <= num_visible_lanes_left(laneSection); i++) {
     LaneID lid = LaneID(i);
     LaneSection::Lane lane = laneSection->laneById(lid);
     std::vector<LaneSection::WidthPoly3> polygons = lane.widthPoly3s();
