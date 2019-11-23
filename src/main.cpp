@@ -1,7 +1,7 @@
 #include <iostream>
-#include <string>
 #include <sstream>
 #include <fstream>
+#include "string.h"
 #include "xodr/xodr_map.h"
 #include "visible_lanes.h"
 
@@ -73,9 +73,9 @@ private:
 
   stl_facet tris_to_facet(Tris tris) {
     stl_facet facet;
-    facet.normal[0] = 0;
-    facet.normal[1] = 0;
-    facet.normal[2] = 1;
+    facet.normal[0] = (float) 0.0;
+    facet.normal[1] = (float) 0.0;
+    facet.normal[2] = (float) 1.0;
 
     std::vector<Eigen::Vector2d> vertices = tris.get_vertecies();
 
@@ -83,17 +83,17 @@ private:
     Eigen::Vector2d v2 = vertices.at(1);
     Eigen::Vector2d v3 = vertices.at(2);
 
-    facet.v1[0] = v1.x();
-    facet.v1[1] = v1.y();
-    facet.v1[2] = 0;
+    facet.v1[0] = (float) v1.x();
+    facet.v1[1] = (float) v1.y();
+    facet.v1[2] = (float) 0.0;
 
-    facet.v2[0] = v2.x();
-    facet.v2[1] = v2.y();
-    facet.v3[2] = 0;
+    facet.v2[0] = (float) v2.x();
+    facet.v2[1] = (float) v2.y();
+    facet.v3[2] = (float) 0.0;
 
-    facet.v3[0] = v3.x();
-    facet.v3[1] = v3.y();
-    facet.v3[2] = 0;
+    facet.v3[0] = (float) v3.x();
+    facet.v3[1] = (float) v3.y();
+    facet.v3[2] = (float) 0.0;
 
     return facet;
   }
@@ -103,6 +103,7 @@ public:
     facets = tris;
     name = name;
   }
+
   std::string to_ascii() {
     std::ostringstream oss;
     oss << "solid " << name << std::endl;
@@ -112,22 +113,25 @@ public:
     oss << "endsolid " << name << std::endl;
     return oss.str();
   }
+
   void save_binary(std::string filename) {
     std::ofstream file;
     file.open(filename, std::ios::out | std::ios::binary);
+    file.imbue(std::locale::classic());
 
-    char header[80] = {0};
+    char header[80];
+    std::fill(header, header + sizeof( header ), 0 );
     unsigned int num_facets = facets.size();
-
-    file << header << num_facets;
+    file.write(header, sizeof(header));
+    file.write((char*)&num_facets, sizeof(num_facets));
 
     for (Tris t : facets) {
       Stl::stl_facet f = tris_to_facet(t);
-      file <<  f.normal << f.v1 << f.v2 << f.v3 << f.abc;
+
+      file.write((char*)&f, sizeof(Stl::stl_facet));
+
     }
 
-    file.close();
-    
   }
 };
 
@@ -279,6 +283,7 @@ int main() {
 
       Stl stl(mesh, "road");
       stl.save_binary("stl_export.stl");
+      std::cout << stl.to_ascii() << std::endl;
     }
   else
     {
