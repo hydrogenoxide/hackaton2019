@@ -207,11 +207,13 @@ std::vector<Tris> convert_stl(XodrMap* xodrMap) {
 
 
 
-      for (int i = 1; i < number_steps; i++) {
+      for (int i = 1; i <= number_steps; i++) {
 	s += step_size;
 	if (s > laneSection.endS()) {
-	  std::cerr << "s to big after " << i << " steps" << std::endl;
-	  break;
+	  // The variable s becomes to big because of inaccuracies of floating point.
+	  // Set it to the end to fix the bug :)
+	  // std::cerr << "s=" << s << " too big (>" << laneSection.endS() << ") after " << i << " steps of " << step_size << std::endl;
+	  s = laneSection.endS();
 	}
 	std::vector<Eigen::Vector2d> vertices_next =
 	  get_one_vertex_row(&laneSection, &ref_line, s, start);
@@ -228,7 +230,7 @@ std::vector<Tris> convert_stl(XodrMap* xodrMap) {
 }
 
 int main() {
-  const char* path = xodrFiles[1].path;
+  const char* path = xodrFiles[0].path;
 
   // std::cout << "Loading xodr file: " << path << std::endl;
 
