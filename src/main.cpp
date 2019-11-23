@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <sstream>
+#include <fstream>
 #include "xodr/xodr_map.h"
 #include "visible_lanes.h"
 
@@ -70,6 +71,33 @@ private:
     return oss.str();
   }
 
+  stl_facet tris_to_facet(Tris tris) {
+    stl_facet facet;
+    facet.normal[0] = 0;
+    facet.normal[1] = 0;
+    facet.normal[2] = 1;
+
+    std::vector<Eigen::Vector2d> vertices = tris.get_vertecies();
+
+    Eigen::Vector2d v1 = vertices.at(0);
+    Eigen::Vector2d v2 = vertices.at(1);
+    Eigen::Vector2d v3 = vertices.at(2);
+
+    facet.v1[0] = v1.x();
+    facet.v1[1] = v1.y();
+    facet.v1[2] = 0;
+
+    facet.v2[0] = v2.x();
+    facet.v2[1] = v2.y();
+    facet.v3[2] = 0;
+
+    facet.v3[0] = v3.x();
+    facet.v3[1] = v3.y();
+    facet.v3[2] = 0;
+
+    return facet;
+  }
+
 public:
   Stl(std::vector<Tris> tris, std::string name) {
     facets = tris;
@@ -83,6 +111,23 @@ public:
     }
     oss << "endsolid " << name << std::endl;
     return oss.str();
+  }
+  void save_binary(std::string filename) {
+    std::ofstream file;
+    file.open(filename, std::ios::out | std::ios::binary);
+
+    char header[80] = {0};
+    unsigned int num_facets = facets.size();
+
+    file << header << num_facets;
+
+    for (Tris t : facets) {
+      Stl::stl_facet f = tris_to_facet(t);
+      file <<  f.normal << f.v1 << f.v2 << f.v3 << f.abc;
+    }
+
+    file.close();
+    
   }
 };
 
@@ -100,16 +145,6 @@ static const XodrFileInfo xodrFiles[] = {
 };
 
 using namespace aid::xodr;
-
-void tris(Eigen::Vector2d v1, Eigen::Vector2d v2, Eigen::Vector2d v3) {
-  std::cout << "facet normal 0 0 1" << std::endl;
-  std::cout << "\touter loop" << std::endl;
-  std::cout << "\t\tvertex " << (v1.x()) << " " << (v1.y()) << " " << "0" << std::endl;
-  std::cout << "\t\tvertex " << (v2.x()) << " " << (v2.y()) << " " << "0" << std::endl;
-  std::cout << "\t\tvertex " << (v3.x()) << " " << (v3.y()) << " " << "0" << std::endl;
-  std::cout << "\tendloop" << std::endl;
-  std::cout << "endfacet" << std::endl;
-}
 
 int get_poligon(double s_section, std::vector<LaneSection::WidthPoly3>* polygons) {
   double commulative_offset = 0;
@@ -243,7 +278,7 @@ int main() {
       std::vector<Tris> mesh = convert_stl(xodrMap);
 
       Stl stl(mesh, "road");
-      std::cout << stl.to_ascii();
+      stl.save_binary("stl_export.stl");
     }
   else
     {
