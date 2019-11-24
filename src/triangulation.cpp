@@ -1,23 +1,20 @@
 #include "triangulation.h"
-#include "xodr/xodr_map.h"
-#include "visible_lanes.h"
 #include "stl.h"
 #include "tris.h"
-
+#include "visible_lanes.h"
+#include "xodr/xodr_map.h"
 
 using namespace aid::xodr;
 
-SimpleMesh::SimpleMesh(std::vector<Tris> mesh){
-  surface = mesh;
-}
+SimpleMesh::SimpleMesh(std::vector<Tris> mesh) { surface = mesh; }
 
-
-size_t SimpleMesh::save_to_file(std::string filename, SimpleMesh::FileFormat format){
+size_t SimpleMesh::save_to_file(std::string filename,
+                                SimpleMesh::FileFormat format) {
   Stl stl(surface, filename);
   size_t bytes_written = 0;
 
   switch (format) {
-  case STL_BINARY: //not working yet so ascii it is
+  case STL_BINARY: // not working yet so ascii it is
   case STL_ASCII:
     std::ofstream file;
     file.open(filename + ".stl", std::ios::out);
@@ -28,8 +25,8 @@ size_t SimpleMesh::save_to_file(std::string filename, SimpleMesh::FileFormat for
   return bytes_written;
 }
 
-
-int get_poligon(double s_section, std::vector<LaneSection::WidthPoly3>* polygons) {
+int get_poligon(double s_section,
+                std::vector<LaneSection::WidthPoly3> *polygons) {
   double commulative_offset = 0;
 
   for (int i = 0; i < polygons->size(); i++) {
@@ -42,10 +39,11 @@ int get_poligon(double s_section, std::vector<LaneSection::WidthPoly3>* polygons
   return polygons->size() - 1;
 }
 
-std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection* laneSection,
-						ReferenceLine* ref_line,
-						double s, double start){
-  std::vector<Eigen::Vector2d> vertex_row(visible_lanes(laneSection).size() + 1);
+std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection *laneSection,
+                                                ReferenceLine *ref_line,
+                                                double s, double start) {
+  std::vector<Eigen::Vector2d> vertex_row(visible_lanes(laneSection).size() +
+                                          1);
 
   // point and tangent direction at the current s we are looking at
   ReferenceLine::PointAndTangentDir ptd = ref_line->eval(s);
@@ -84,59 +82,56 @@ std::vector<Eigen::Vector2d> get_one_vertex_row(LaneSection* laneSection,
   return vertex_row;
 }
 
-std::vector<Tris> create_mesh(std::vector<Eigen::Vector2d>* vertices_behind,
-			      std::vector<Eigen::Vector2d>* vertices_next){
+std::vector<Tris> create_mesh(std::vector<Eigen::Vector2d> *vertices_behind,
+                              std::vector<Eigen::Vector2d> *vertices_next) {
   std::vector<Tris> mesh(2 * (vertices_next->size() - 1));
 
   for (int i = 0; i < vertices_next->size() - 1; ++i) {
-    Tris tris1(vertices_next->at(i), vertices_behind->at(i), vertices_behind->at(i + 1));
-    Tris tris2(vertices_next->at(i), vertices_behind->at(i + 1), vertices_next->at(i + 1));
+    Tris tris1(vertices_next->at(i), vertices_behind->at(i),
+               vertices_behind->at(i + 1));
+    Tris tris2(vertices_next->at(i), vertices_behind->at(i + 1),
+               vertices_next->at(i + 1));
     mesh.push_back(tris1);
     mesh.push_back(tris2);
   }
   return mesh;
 }
 
-
-
-SimpleMesh convert_xodr(XodrMap* xodrMap) {
+SimpleMesh convert_xodr(XodrMap *xodrMap) {
 
   size_t number_steps = 100;
 
   std::vector<Tris> mesh;
 
-  for (const Road& road : xodrMap->roads()) {
-
+  for (const Road &road : xodrMap->roads()) {
 
     ReferenceLine ref_line = road.referenceLine();
 
-    for (LaneSection laneSection : road.laneSections()){
+    for (LaneSection laneSection : road.laneSections()) {
 
-      double step_size = (laneSection.endS() - laneSection.startS()) / number_steps;
+      double step_size =
+          (laneSection.endS() - laneSection.startS()) / number_steps;
       double start = laneSection.startS();
       double s = start;
 
-
       std::vector<Eigen::Vector2d> vertices_behind =
-	get_one_vertex_row(&laneSection, &ref_line, s, start);
-
-
+          get_one_vertex_row(&laneSection, &ref_line, s, start);
 
       for (int i = 1; i <= number_steps; i++) {
 	s += step_size;
 	if (s > laneSection.endS()) {
-	  // The variable s becomes to big because of inaccuracies of floating point.
-	  // Set it to the end to fix the bug :)
+	  // The variable s becomes to big because of inaccuracies of floating
+	  // point. Set it to the end to fix the bug :)
 	  s = laneSection.endS();
 	}
 	std::vector<Eigen::Vector2d> vertices_next =
-	  get_one_vertex_row(&laneSection, &ref_line, s, start);
+	    get_one_vertex_row(&laneSection, &ref_line, s, start);
 
-	std::vector<Tris> new_tris = create_mesh(&vertices_behind, &vertices_next);
+	std::vector<Tris> new_tris =
+	    create_mesh(&vertices_behind, &vertices_next);
 	mesh.reserve(mesh.size() + new_tris.size());
 	mesh.insert(mesh.end(), new_tris.begin(), new_tris.end());
 	vertices_behind = vertices_next;
-
       }
     }
   }
@@ -147,12 +142,12 @@ SimpleMesh convert_xodr(std::string path) {
   XodrParseResult<XodrMap> fromFileRes = XodrMap::fromFile(path);
 
   if (!fromFileRes.hasFatalErrors()) {
-    XodrMap* xodrMap(new XodrMap(std::move(fromFileRes.value())));
+    XodrMap *xodrMap(new XodrMap(std::move(fromFileRes.value())));
 
     return convert_xodr(xodrMap);
   } else {
     std::cerr << "Errors: " << std::endl;
-    for (const auto& err : fromFileRes.errors()) {
+    for (const auto &err : fromFileRes.errors()) {
       std::cerr << err.description() << std::endl;
     }
     std::cerr << "Failed to load xodr file " << path << std::endl;

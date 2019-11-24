@@ -1,10 +1,8 @@
-#include <iostream>
 #include "triangulation.h"
-
-
+#include <iostream>
 
 int main() {
-  std::string path = "data/opendrive/Roundabout8Course.xodr";
+  std::string path = "data/opendrive/sample1.1.xodr";
 
   try {
     SimpleMesh mesh = convert_xodr(path);
