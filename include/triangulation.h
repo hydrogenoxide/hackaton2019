@@ -6,28 +6,24 @@
 
 using namespace aid::xodr;
 
-struct XodrFileInfo
-{
-  const char* name;
-  const char* path;
+struct XodrFileInfo {
+  const char *name;
+  const char *path;
 };
 
-
-
 class SimpleMesh {
- private:  
+private:
   std::vector<Tris> surface;
 
- public:
+public:
   enum FileFormat {
-		    STL_ASCII,
-		    STL_BINARY,
+    STL_ASCII,
+    STL_BINARY,
   };
 
   SimpleMesh(std::vector<Tris> mesh);
   size_t save_to_file(std::string filename, FileFormat format);
-  
 };
 
-SimpleMesh convert_xodr(XodrMap* xodrMap);
+SimpleMesh convert_xodr(XodrMap *xodrMap);
 SimpleMesh convert_xodr(std::string path);

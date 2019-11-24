@@ -11,8 +11,6 @@ private:
 
 public:
   Tris();
-  Tris(Eigen::Vector2d vv1,
-       Eigen::Vector2d vv2,
-       Eigen::Vector2d vv3);
+  Tris(Eigen::Vector2d vv1, Eigen::Vector2d vv2, Eigen::Vector2d vv3);
   std::vector<Eigen::Vector2d> get_vertecies();
 };

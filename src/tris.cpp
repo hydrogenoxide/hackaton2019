@@ -1,14 +1,12 @@
 #include "tris.h"
 
-Tris::Tris(){
+Tris::Tris() {
   v1 = Eigen::Vector2d(0.0, 0.0);
   v2 = Eigen::Vector2d(0.0, 0.0);
   v3 = Eigen::Vector2d(0.0, 0.0);
 }
 
-Tris::Tris(Eigen::Vector2d vv1,
-	   Eigen::Vector2d vv2,
-	   Eigen::Vector2d vv3) {
+Tris::Tris(Eigen::Vector2d vv1, Eigen::Vector2d vv2, Eigen::Vector2d vv3) {
   v1 = vv1;
   v2 = vv2;
   v3 = vv3;
